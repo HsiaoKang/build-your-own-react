@@ -1,7 +1,3 @@
-const ELEMENT_TYPE = {
-    TEXT_ELEMENT: Symbol("text element"),
-}
-
 function createElement(type, props, ...children) {
     return {
         type,
@@ -16,7 +12,7 @@ function createElement(type, props, ...children) {
 
 function createTextElement(text) {
     return {
-        type: ELEMENT_TYPE.TEXT_ELEMENT,
+        type: "TEXT_ELEMENT",
         props: {
             nodeValue: text,
             children: [],
@@ -24,8 +20,27 @@ function createTextElement(text) {
     }
 }
 
+function render(element, container) {
+    // create dom nodes
+    const dom =
+        element.type === "TEXT_ELEMENT"
+            ? document.createTextNode("")
+            : document.createElement(element.type)
+
+            // 将非节点的 props 传递到 node 属性上
+    const isProperty = (key) => key !== "children"
+    Object.keys(element.props)
+        .filter(isProperty)
+        .forEach((name) => {
+            dom[name] = element.props[name]
+        })
+    element.props.children.forEach((child) => render(child, dom))
+    container.appendChild(dom)
+}
+
 const Sact = {
-    createElement
+    createElement,
+    render,
 }
 
 /** @jsx  Sact.createElement */
@@ -37,4 +52,4 @@ const element = (
 )
 
 const container = document.getElementById("root")
-ReactDOM.render(element, container)
+Sact.render(element, container)
