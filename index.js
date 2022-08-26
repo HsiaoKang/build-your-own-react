@@ -27,7 +27,7 @@ function render(element, container) {
             ? document.createTextNode("")
             : document.createElement(element.type)
 
-            // 将非节点的 props 传递到 node 属性上
+    // 将非节点的 props 传递到 node 属性上
     const isProperty = (key) => key !== "children"
     Object.keys(element.props)
         .filter(isProperty)
@@ -37,6 +37,22 @@ function render(element, container) {
     element.props.children.forEach((child) => render(child, dom))
     container.appendChild(dom)
 }
+
+let nextUnitOfWork = null
+
+function workLoop(deadline) {
+    let shouldYield = false
+    while (nextUnitOfWork && !shouldYield) {
+        nextUnitOfWork = performUnitOfWork(nextUnitOfWork)
+        // 当前帧是否还有剩余时间
+        shouldYield = deadline.timeRemaining() < 1
+    }
+    requestIdleCallback(workLoop)
+}
+
+requestIdleCallback(workLoop)
+
+function performUnitOfWork(nextUnitOfWork) {}
 
 const Sact = {
     createElement,
