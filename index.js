@@ -20,22 +20,30 @@ function createTextElement(text) {
     }
 }
 
-function render(element, container) {
+function createDom(fiber) {
     // create dom nodes
     const dom =
-        element.type === "TEXT_ELEMENT"
+        fiber.type === "TEXT_ELEMENT"
             ? document.createTextNode("")
-            : document.createElement(element.type)
+            : document.createElement(fiber.type)
 
     // 将非节点的 props 传递到 node 属性上
     const isProperty = (key) => key !== "children"
-    Object.keys(element.props)
+    Object.keys(fiber.props)
         .filter(isProperty)
         .forEach((name) => {
-            dom[name] = element.props[name]
+            dom[name] = fiber.props[name]
         })
-    element.props.children.forEach((child) => render(child, dom))
-    container.appendChild(dom)
+    return fiber
+}
+
+function render(element, container) {
+    nextUnitOfWork = {
+        dom: container,
+        props: {
+            children: [element],
+        },
+    }
 }
 
 let nextUnitOfWork = null
@@ -52,8 +60,63 @@ function workLoop(deadline) {
 
 requestIdleCallback(workLoop)
 
-function performUnitOfWork(nextUnitOfWork) {}
+function performUnitOfWork(fiber) {
+    if (!fiber.dom) {
+        fiber.dom = createDom(fiber)
+    }
 
+    if (fiber.parent) {
+        fiber.parent.dom.appendChild(fiber.dom)
+    }
+
+    const elements = fiber.props.children
+    let index = 0
+    let prevSibing = null
+
+    while (index < elements.length) {
+        const element = element[index]
+        const newFiber = {
+            type: element.type,
+            props: element.props,
+            parent: fiber,
+            dom: null,
+        }
+
+        if (index === 0) {
+            fiber.child = newFiber
+        } else {
+            prevSibing.sibling = newFiber
+        }
+        prevSibing = newFiber
+        index++
+    }
+
+    if (fiber.child) {
+        return fiber.child
+    }
+    let nextFiber = fiber
+    while (nextFiber) {
+        if (nextFiber.sibling) {
+            return nextFiber.sibling
+        }
+        nextFiber = nextFiber.parent
+    }
+}
+
+// Fiber tree
+/**
+ * <div>
+ *  <h1>
+ *     <p>
+ *     <a>
+ *  </h1>
+ *  <h2/>
+ * </div>
+ *
+ * @to
+ *
+ * div=>h1=>p=>a=>h1=>h2=>div
+ */
 const Sact = {
     createElement,
     render,
